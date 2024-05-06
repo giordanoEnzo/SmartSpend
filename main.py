@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from utils.db import db
+from utils.db import engine
 import formatar
 
 
@@ -10,12 +10,6 @@ class Prompt(BaseModel):
 
 app = FastAPI()
 
-db.init_app(app)
-
-
-@app.on_event("startup")
-async def startup():
-    db.create_all()
 
 @app.post("/chat")
 async def chat(prompt: Prompt):

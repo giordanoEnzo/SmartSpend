@@ -1,7 +1,6 @@
-from utils.db import db
+from utils.db import db, Base
 
-
-class Ssdc(db.Model):
+class Ssdc(Base):
     __tablename__ = 'ssdc'
     id = db.Column(db.Integer, primary_key=True)
     SSTITU = db.Column(db.String())
