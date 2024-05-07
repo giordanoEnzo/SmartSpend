@@ -1,12 +1,13 @@
-from utils.db import db, Base
+from sqlalchemy import Column, Integer, String
+from utils.db import Base, db
 
 class Ssdc(Base):
     __tablename__ = 'ssdc'
-    id = db.Column(db.Integer, primary_key=True)
-    SSTITU = db.Column(db.String())
-    SSORIG = db.Column(db.String())
-    SSPROC = db.Column(db.String())
-    SSQTTK = db.Column(db.Integer())
+    id = Column(Integer, primary_key=True)
+    SSTITU = Column(String)
+    SSORIG = Column(String)
+    SSPROC = Column(String)
+    SSQTTK = Column(Integer)
 
     def __init__(self, SSTITU, SSORIG, SSPROC, SSQTTK):
         self.SSTITU = SSTITU
@@ -16,4 +17,6 @@ class Ssdc(Base):
 
     @classmethod
     def ler_documentos(cls):
-        return cls.query.all()
+        session = db()
+        documentos = session.query(cls).all()
+        return documentos

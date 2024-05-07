@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from utils.db import engine
+from models.documentoModel import Ssdc
 import formatar
 
 
@@ -13,13 +14,23 @@ app = FastAPI()
 
 @app.post("/chat")
 async def chat(prompt: Prompt):
-    prompt_formatado = formatacoes(prompt.pergunta)
-    print(prompt_formatado)
+    prompt_formatado, titulos_formatados = formatacoes(prompt.pergunta)
+    print(prompt_formatado, titulos_formatados)
     return prompt.pergunta
 
 
 def formatacoes(texto):
-    formatacao = formatar.remover_pontuacao(texto)
-    formatacao = formatar.remover_stopwords(formatacao)
-    formatacao = formatar.radicalizar(formatacao)
-    return formatacao
+    formatacao_pergunta = formatar.remover_pontuacao(texto)
+    formatacao_pergunta = formatar.remover_stopwords(formatacao_pergunta)
+    formatacao_pergunta = formatar.radicalizar(formatacao_pergunta)
+
+    titulos_formatados = {}
+    registros = Ssdc.ler_documentos()
+    for registro in registros:
+        titulo = registro.SSTITU
+        titulo = registro.remover_pontuacao(titulo)
+        titulo = registro.remover_stopwords(titulo)
+        titulo = registro.radicalizar(titulo)
+        titulos_formatados[registro.id] = [titulo]
+    return formatacao_pergunta, titulos_formatados
+
