@@ -24,13 +24,13 @@ def formatacoes(texto):
     formatacao_pergunta = formatar.remover_stopwords(formatacao_pergunta)
     formatacao_pergunta = formatar.radicalizar(formatacao_pergunta)
 
-    titulos_formatados = {}
+    titulos_formatados = []
     registros = Ssdc.ler_documentos()
     for registro in registros:
         titulo = registro.sstitu
         titulo = registro.remover_pontuacao(titulo)
         titulo = registro.remover_stopwords(titulo)
         titulo = registro.radicalizar(titulo)
-        titulos_formatados[registro.id] = [titulo]
+        titulos_formatados.append(titulo)
     return formatacao_pergunta, titulos_formatados
 
