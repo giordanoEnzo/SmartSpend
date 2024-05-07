@@ -4,16 +4,16 @@ from utils.db import Base, db
 class Ssdc(Base):
     __tablename__ = 'ssdc'
     id = Column(Integer, primary_key=True)
-    SSTITU = Column(String)
-    SSORIG = Column(String)
-    SSPROC = Column(String)
-    SSQTTK = Column(Integer)
+    sstitu = Column(String)
+    ssorig = Column(String)
+    ssproc = Column(String)
+    ssqttk = Column(Integer)
 
-    def __init__(self, SSTITU, SSORIG, SSPROC, SSQTTK):
-        self.SSTITU = SSTITU
-        self.SSORIG = SSORIG
-        self.SSPROC = SSPROC
-        self.SSQTTK = SSQTTK
+    def __init__(self, sstitu, ssorig, ssproc, ssqttk):
+        self.sstitu = sstitu
+        self.ssorig = ssorig
+        self.ssprog = ssproc
+        self.ssqttk = ssqttk
 
     @classmethod
     def ler_documentos(cls):

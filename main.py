@@ -27,7 +27,7 @@ def formatacoes(texto):
     titulos_formatados = {}
     registros = Ssdc.ler_documentos()
     for registro in registros:
-        titulo = registro.SSTITU
+        titulo = registro.sstitu
         titulo = registro.remover_pontuacao(titulo)
         titulo = registro.remover_stopwords(titulo)
         titulo = registro.radicalizar(titulo)
