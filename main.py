@@ -1,9 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, Form
 from pydantic import BaseModel
 from utils.db import engine
 from models.documentoModel import Ssdc
 from BM25.score import ScoreBM25
+from pdfs.manipulador import extrair, gerar_processado
 import formatar
+import shutil
+import os
 
 
 class Prompt(BaseModel):
@@ -27,6 +30,37 @@ async def chat(prompt: Prompt):
 
 #    print(total_tokens_titulos)
     return prompt.pergunta
+
+@app.post("/administrador")
+async def administrador(nome_pdf: str = Form(...), arquivo_pdf: UploadFile = File(...)):
+    print(nome_pdf)
+
+    with open(os.path.join('/Users/enzogiordanoaraujo/SmartSpend/smartspendAPI/documentos/', arquivo_pdf.filename),"wb") as buffer:
+        shutil.copyfileobj(arquivo_pdf.file, buffer)
+
+    conteudo_documento = extrair(arquivo_pdf.filename)
+    conteudo_processado = processar_documento(conteudo_documento)
+    gerar_processado(conteudo_processado, arquivo_pdf.filename)
+
+    caminho_original = '/Users/enzogiordanoaraujo/SmartSpend/smartspendAPI/documentos/' + arquivo_pdf.filename
+    with open(caminho_original, 'rb') as arquivo:
+        binario_original = arquivo.read()
+
+    caminho_processado = '/Users/enzogiordanoaraujo/SmartSpend/smartspendAPI/documentos-processados/' + arquivo_pdf.filename
+    with open(caminho_processado, 'rb') as arquivo:
+        binario_processado = arquivo.read()
+
+    Ssdc.gravar_documento(arquivo_pdf.filename, len(conteudo_processado), binario_original, binario_processado)
+    print('ok')
+    return 'ok'
+
+
+def processar_documento(conteudo_pdf):
+    conteudo_formatado = formatar.remover_pontuacao(conteudo_pdf)
+    conteudo_formatado = formatar.remover_stopwords(conteudo_formatado)
+    conteudo_formatado = formatar.radicalizar(conteudo_formatado)
+
+    return conteudo_formatado
 
 
 def formatacoes(texto):
