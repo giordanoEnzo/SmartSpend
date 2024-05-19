@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, LargeBinary
+from sqlalchemy import Column, Integer, String, LargeBinary, func
 from utils.db import Base, db
 
 
@@ -23,8 +23,21 @@ class Ssdc(Base):
         return documentos
 
     @classmethod
+    def ler_documento(cls, id):
+        session = db()
+        documento = session.query(cls).filter_by(id=id).first()
+        return documento
+
+    @classmethod
     def gravar_documento(cls, sstitu, ssqttk, sspdfo, sspdfp):
         session = db()
         documento = cls(sstitu=sstitu, ssqttk=ssqttk, sspdfo=sspdfo, sspdfp=sspdfp)
         session.add(documento)
         session.commit()
+
+    @classmethod
+    def somar_ssqttk(cls):
+        session = db()
+        soma = session.query(func.sum(cls.ssqttk)).scalar()
+        return soma
+

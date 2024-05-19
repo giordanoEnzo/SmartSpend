@@ -1,9 +1,10 @@
 from fastapi import FastAPI, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from utils.db import engine
 from models.documentoModel import Ssdc
+from ia.gpt import GPT
 from BM25.score import ScoreBM25
-from pdfs.manipulador import extrair, gerar_processado
+from pdfs.manipulador import extrair, gerar_processado, extrair_bytea
 import formatar
 import shutil
 import os
@@ -14,6 +15,14 @@ class Prompt(BaseModel):
 
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
 
 
 @app.post("/chat")
@@ -26,14 +35,34 @@ async def chat(prompt: Prompt):
 
     total_tokens_titulos, tokens_por_titulo = calcular_tokens_titulos(titulos_formatados)
 
-    score = calcular_score(total_documentos, repeticao_termos_pergunta, total_tokens_titulos, tokens_por_titulo, tokens_por_documento)
+    score_titulos = calcular_score(total_documentos, repeticao_termos_pergunta, total_tokens_titulos, tokens_por_documento)
 
-#    print(total_tokens_titulos)
-    return prompt.pergunta
+    conteudos_docs = {}
+    quantidade_tokens_pdf = {}
+    for chave, valor in score_titulos:
+        registro = Ssdc.ler_documento(chave)
+        valor_bytea = registro.sspdfp
+        conteudo_chave = extrair_bytea(valor_bytea)
+        conteudo_chave = conteudo_chave.split()
+        conteudos_docs[chave] = conteudo_chave
+        quantidade_tokens_pdf[chave] = registro.ssqttk
+
+    repeticao_termos_prompt = calcular_repeticao_geral(prompt_formatado, conteudos_docs)
+    tokens_por_pdf = calcular_repeticao_por_documento(prompt_formatado, conteudos_docs)
+    total_tokens_pdf = Ssdc.somar_ssqttk()
+    score = calcular_score(total_documentos, repeticao_termos_prompt, total_tokens_pdf, tokens_por_pdf)
+
+    melhor_documento = next(iter(score))
+    registro_md = Ssdc.ler_documento(melhor_documento[0])
+    bytea_md = registro_md.sspdfo
+    conteudo_md = extrair_bytea(bytea_md)
+    prompt_gpt = montar_prompt_gpt(prompt.pergunta, conteudo_md)
+    resposta = GPT(prompt_gpt).gerar_resposta()
+    return {"resposta": resposta}
+
 
 @app.post("/administrador")
 async def administrador(nome_pdf: str = Form(...), arquivo_pdf: UploadFile = File(...)):
-    print(nome_pdf)
 
     with open(os.path.join('/Users/enzogiordanoaraujo/SmartSpend/smartspendAPI/documentos/', arquivo_pdf.filename),"wb") as buffer:
         shutil.copyfileobj(arquivo_pdf.file, buffer)
@@ -50,8 +79,11 @@ async def administrador(nome_pdf: str = Form(...), arquivo_pdf: UploadFile = Fil
     with open(caminho_processado, 'rb') as arquivo:
         binario_processado = arquivo.read()
 
-    Ssdc.gravar_documento(arquivo_pdf.filename, len(conteudo_processado), binario_original, binario_processado)
-    print('ok')
+    Ssdc.gravar_documento(nome_pdf, len(conteudo_processado), binario_original, binario_processado)
+
+    os.remove(caminho_original)
+    os.remove(caminho_processado)
+
     return 'ok'
 
 
@@ -122,7 +154,7 @@ def calcular_repeticao_por_documento(termos_perguntas, termos_textos):
     return tokens_por_documentos
 
 
-def calcular_score(total_documentos, repeticoes_termos_perguntas, total_tokens_documentos, tokens_por_registro, tokens_por_documento):
+def calcular_score(total_documentos, repeticoes_termos_perguntas, total_tokens_documentos, tokens_por_documento):
     idf = {}
     for termo in repeticoes_termos_perguntas:
         if repeticoes_termos_perguntas[termo] > 0:
@@ -157,13 +189,13 @@ def calcular_score(total_documentos, repeticoes_termos_perguntas, total_tokens_d
 
             anterior = id_doc
 
-    maior_valor = 0
-    maior_chave = 0
-    for chave in pontuacoes_doc:
-        if pontuacoes_doc[chave] > maior_valor:
-            maior_valor = pontuacoes_doc[chave]
-            maior_chave = chave
+    pontuacoes_ordenadas = sorted(pontuacoes_doc.items(), key=lambda x: x[1], reverse=True)
 
-    print(maior_chave, maior_valor)
-    print(pontuacoes_doc)
+    maiores_pontuacoes = pontuacoes_ordenadas[:3]
 
+    return maiores_pontuacoes
+
+
+def montar_prompt_gpt(pergunta, conteudo_doc):
+    prompt = f'Por favor, forneça uma resposta para esta pergunta [{pergunta}] com base no seguinte texto: [{conteudo_doc}]'
+    return prompt

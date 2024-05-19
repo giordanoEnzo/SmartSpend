@@ -25,5 +25,4 @@ class ScoreBM25():
 
     def score(self):
         return self.idf * self.tf * (self.k3 + 1) / self.tf + self.k3
-        # Fazer a somatoria em outro lugar
 
